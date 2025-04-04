@@ -1,75 +1,97 @@
+/*
+ ✨ Optional Enhancements You Might Consider:
+     Move the AVPlayer handling into its own class (PlayerManager or similar), and expose playback state via bindings or @Published properties.
+     Add playNext(), playPrevious(), or shuffle/repeat logic if you plan to grow this app.
+     Implement persistence for user settings like coverSize or last played album/track.
+ */
+
 import Foundation
 import AVFoundation
 
+// The main state object for the Coldwave app.
+// This holds and manages the app's playback state, album list, and user interactions.
 class ColdwaveState: ObservableObject {
     
-    @Published var albums: [Album] = []
-    @Published var path: String = "";
-    @Published var currentAlbum: Album?
-    @Published var currentTrack = 0
-    @Published var coverSize: CGFloat = DEFAULT_IMAGE_SIZE
-    @Published var playlist: [URL]  = []
-    @Published var amountPlayed: Double = 0.0 // in range 0...1
-    @Published var playing: Bool = false
-    @Published var searchText: String = ""
+    // MARK: - Published Properties (bound to UI)
 
+    @Published var albums: [Album] = []          // All scanned albums in the selected directory
+    @Published var path: String = ""             // Root path of the scanned music directory
+    @Published var currentAlbum: Album?          // Currently selected album
+    @Published var currentTrack = 0              // Index of the currently playing track
+    @Published var coverSize: CGFloat = DEFAULT_IMAGE_SIZE // Size of album artwork in the UI
+    @Published var playlist: [URL]  = []         // URLs of the tracks to play (current album)
+    @Published var amountPlayed: Double = 0.0    // Track progress (0.0 to 1.0)
+    @Published var playing: Bool = false         // Whether the player is currently playing
+    @Published var searchText: String = ""       // User's current search input for filtering albums
+
+    // AVPlayer handles audio playback
     let player: AVPlayer = AVPlayer()
 
+    // MARK: - Initializer
+
     init() {
+        // Add a periodic observer to update the progress slider in the UI
         player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 0.5, preferredTimescale: CMTimeScale(NSEC_PER_SEC)),
             queue: .main
         ) { t in
-            // Compare two CMTimeScales and update slider via state,
-            // converting the track duration units to match the amountPlayed units.
+            // Safely get the current item's duration in the same timescale as the current time
             if let duration = self.player.currentItem?.duration.convertScale(t.timescale, method: CMTimeRoundingMethod.default) {
+                // Calculate progress as a fraction (0.0 to 1.0)
                 self.amountPlayed = Double(t.value) / Double(duration.value)
             }
         }
     }
-    
-    // It doesn't seem clean to put this (or the AVPlayer) on the state, but notification
-    // targets have to be objc functions which have to be members of an NSObject or protocol.
-    // I could probably factor the player field and these methods out into another class.
+
+    // MARK: - Track Playback & Navigation
+
+    // Called when the current track finishes playing
+    // Automatically advances to the next track
     @objc func playerDidFinishPlaying(sender: Notification) {
         print("End of track \(currentTrack), advancing.")
         jumpToTrack(currentTrack + 1)
     }
 
-    func jumpToTrack (album: Album, trackNumber: Int) {
-        currentAlbum = album;
-        playlist = album.getPlaylist()
-        jumpToTrack(trackNumber)
+    // Start playback at a specific track within a specific album
+    func jumpToTrack(album: Album, trackNumber: Int) {
+        currentAlbum = album                  // Set the new current album
+        playlist = album.getPlaylist()        // Get the album's playlist
+        jumpToTrack(trackNumber)              // Start playing the desired track
     }
 
-    func jumpToTrack (_ trackNumber: Int) {
+    // Core method to jump to a track by index and start playback
+    func jumpToTrack(_ trackNumber: Int) {
         if (trackNumber >= 0 && trackNumber < playlist.count) {
             let track = AVPlayerItem(asset: AVAsset(url: playlist[trackNumber]))
-            player.replaceCurrentItem(with: track)
-            currentTrack = trackNumber;
-            // I seem to be getting double-starts on automatic transition to next track.
-            // But removing the play() call causes it to stall on the transition.
-            player.play()
+
+            player.replaceCurrentItem(with: track) // Replace with the selected track
+            currentTrack = trackNumber
+            player.play()                          // Start playback
             playing = true
-            // Deregister any previously registered end-of-track notifications to avoid memory leaks.
+
+            // Clean up any previous observer to avoid memory leaks or double triggers
             NotificationCenter.default.removeObserver(self)
-            NotificationCenter.default.addObserver(self,
+            NotificationCenter.default.addObserver(
+                self,
                 selector: #selector(playerDidFinishPlaying(sender:)),
                 name: NSNotification.Name.AVPlayerItemDidPlayToEndTime,
                 object: track
             )
         } else {
+            // Out-of-bounds track index: stop playback
             player.pause()
             playing = false
         }
     }
 
-    func pause () {
+    // Pause the current playback
+    func pause() {
         player.pause()
         playing = false
     }
-    
-    func play () {
+
+    // Resume playback if a track is loaded
+    func play() {
         if (player.currentItem != nil) {
             player.play()
             playing = true

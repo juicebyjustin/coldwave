@@ -1,65 +1,83 @@
+/*
+ Summary of Key Concepts:
+     The Album class represents a single album folder.
+     It automatically loads its cover image and parses its name from the directory structure (Artist/Album/).
+     It provides static methods to scan an entire music folder structure and create Album objects.
+     It includes a playlist generator (getPlaylist) that finds music files inside its folder.
+     It conforms to Identifiable so SwiftUI can efficiently update views.
+     It supports basic search matching against artist/title.
+ 
+ If you want to modify or improve this, for example:
+     Switching from String paths to URL (which is safer and more flexible).
+     Making image loading lazy to improve performance.
+     Adding metadata parsing (e.g., FLAC tags via AVFoundation or another library).
+ */
 import Foundation
-import Quartz
+import Quartz // Used here likely for NSImage support (via macOS QuartzCore frameworks)
 
-// Represents a single album (a single filesystem directory containing audio files).
-// This is the domain model, not the visual representation as a View.
+// Represents a single album, which is basically a directory containing audio and image files.
 class Album: Identifiable, Equatable {
     
+    // Implements the Equatable protocol, using identity comparison (same object in memory)
     static func == (lhs: Album, rhs: Album) -> Bool {
-        // Identity equality for Albums. Could also compare albumPaths for consistency with Identifiable
         lhs === rhs
     }
     
-    let albumPath: String
-    let artist: String
-    let title: String
-    var coverImagePath: String = ""
-    let cover: NSImage
+    let albumPath: String         // Full path to the album's folder
+    let artist: String            // Name of the artist (taken from folder structure)
+    let title: String             // Album title (also from folder structure)
+    var coverImagePath: String = "" // Path to the album cover image file, if found
+    let cover: NSImage            // The cover image itself
 
-    /* Call with full path to a directory */
+    // Initialize an Album from a given folder path
     init (_ albumFullPath: String) {
         albumPath = albumFullPath
         let fileManager = FileManager.default
         let contents = try! fileManager.contentsOfDirectory(atPath: albumFullPath)
+
+        // Look through all the files in the folder to find a suitable cover image
         for file in contents as [String] {
-            var isDir: ObjCBool = false;
+            var isDir: ObjCBool = false
             let lcFile = file.lowercased()
-            // fileManager.changeCurrentDirectoryPath("")
             let fullFilePath = NSString.path(withComponents: [albumFullPath, file])
+            
+            // If the file exists and is NOT a directory...
             if fileManager.fileExists(atPath: fullFilePath, isDirectory: &isDir) && !isDir.boolValue {
+                // Look for files with common image extensions
                 if lcFile.hasSuffix(".jpg") || lcFile.hasSuffix(".jpeg") || lcFile.hasSuffix(".png") {
                     self.coverImagePath = fullFilePath
-                    if (lcFile.hasPrefix("cover") || lcFile.hasPrefix("600x600")) {
+                    // Prefer files that start with "cover" or "600x600"
+                    if lcFile.hasPrefix("cover") || lcFile.hasPrefix("600x600") {
                         break
                     }
                 }
             }
         }
+
+        // Extract album title and artist name from the folder path structure
         var pathComponents = (albumFullPath as NSString).pathComponents
         title = pathComponents.removeLast()
         artist = pathComponents.removeLast()
         // Cache cover images so they're not reloaded on every SwiftUI update cycle.
         // We could defer this until the image is actually used/displayed with a lazy-initializing property.
         // We could also reuse the NSImages for the placeholder "missing cover" images.
-        if (coverImagePath == "") {
+        
+        // Load the image itself
+        if coverImagePath == "" {
+            // Use a default placeholder image if no cover was found
             cover = NSImage(named: "record-sleeve-\(abs(title.hashValue % 2)).png")!
         } else {
+            // Load the image from disk
             cover = NSImage(contentsOfFile: coverImagePath)!
         }
     }
 
-    /*
-        let fileManager = NSFileManager.defaultManager()
-        let enumerator: NSDirectoryEnumerator = fileManager.enumeratorAtPath(basePath)!
-        for element in enumerator.allObjects as [String] {
-            println(element)
-        }
-    */
-
-    // Identifiable protocol - help collection views uniquely identify their subitems
+    // Make the album uniquely identifiable using its folder path
     var id: String { albumPath }
-    
-    // TODO use URLs which are more efficient than string paths
+
+    // MARK: - Static Methods
+
+    // Scans a given artist folder and returns all album subdirectories as Album objects
     static func scanArtist (_ artistBasePath: String) -> [Album] {
         var albums: [Album] = []
         let fileManager = FileManager.default
@@ -73,9 +91,8 @@ class Album: Identifiable, Equatable {
         }
         return albums
     }
-    
 
-    // Return an array of Album objects for subdirectories under the supplied base directory.
+    // Scans an entire music library folder and returns all albums (organized by artist folders)
     static func scanLibrary (at basePath: String) -> [Album] {
         var albums: [Album] = []
         let fileManager = FileManager.default
@@ -90,8 +107,7 @@ class Album: Identifiable, Equatable {
         return albums
     }
 
-
-    // Return an array of URLs, one for each music file in this album's folder.
+    // Returns an array of file URLs to music files inside the album folder
     func getPlaylist () -> [URL] {
         let fileManager = FileManager.default
         let contents = try! fileManager.contentsOfDirectory(atPath: albumPath)
@@ -101,24 +117,23 @@ class Album: Identifiable, Equatable {
             let fullFilePath = NSString.path(withComponents: [albumPath, file])
             var isDir: ObjCBool = false
             if fileManager.fileExists(atPath: fullFilePath, isDirectory: &isDir) && !isDir.boolValue {
+                // Add supported audio formats
                 if lcFile.hasSuffix(".flac") || lcFile.hasSuffix(".mp3") || lcFile.hasSuffix(".m4a") {
                     musicFileURLs.append(URL(fileURLWithPath: fullFilePath))
                 }
             }
         }
         return musicFileURLs
-    }    
+    }
 
-    // Return true if the artist or title contains the specified search string, ignoring case and diacritical marks.
+    // Checks if the album's artist or title matches the user's search term
     func matchesSearchTerm (_ searchTerm: String) -> Bool {
-        // Contains method does not return true for empty string argument.
+        // Also returns true if search term is empty
         searchTerm.isEmpty || artist.localizedStandardContains(searchTerm) || title.localizedStandardContains(searchTerm)
     }
-    
-    //    We could use these to decide whether to catalog a given directory, allowing more flexible director layout.
-    //    class func findMusicFiles
-    //    class func findCoverImages
-    //    class func findMetadataInDir
 
-
+    // Potential future features hinted at:
+    // class func findMusicFiles
+    // class func findCoverImages
+    // class func findMetadataInDir
 }

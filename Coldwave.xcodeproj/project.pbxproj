@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D0EBF09B2DA0285B001FA06E /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = D0EBF09A2DA02857001FA06E /* README.md */; };
 		F823C8CB2709C06E00CB6F31 /* AlbumCoverView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F823C8CA2709C06E00CB6F31 /* AlbumCoverView.swift */; };
 		F823C8CD2709CBA500CB6F31 /* PlaybackControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F823C8CC2709CBA500CB6F31 /* PlaybackControlView.swift */; };
 		F84AB2DB269329D400D69D4F /* ColdwaveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F84AB2DA269329D400D69D4F /* ColdwaveApp.swift */; };
@@ -37,6 +38,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D0EBF09A2DA02857001FA06E /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		F823C8CA2709C06E00CB6F31 /* AlbumCoverView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumCoverView.swift; sourceTree = "<group>"; };
 		F823C8CC2709CBA500CB6F31 /* PlaybackControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackControlView.swift; sourceTree = "<group>"; };
 		F84AB2D7269329D400D69D4F /* Coldwave.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Coldwave.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,6 +96,7 @@
 		F84AB2D9269329D400D69D4F /* Coldwave */ = {
 			isa = PBXGroup;
 			children = (
+				D0EBF09A2DA02857001FA06E /* README.md */,
 				F84AB2FB26934D5000D69D4F /* ContentView.swift */,
 				F84AB2EA26932B0B00D69D4F /* Album.swift */,
 				F84AB2EE26932B0B00D69D4F /* Credits.rtf */,
@@ -180,6 +183,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D0EBF09B2DA0285B001FA06E /* README.md in Resources */,
 				F84AB2F326932B0C00D69D4F /* Credits.rtf in Resources */,
 				F84AB2F226932B0C00D69D4F /* record-sleeve-1.png in Resources */,
 				F84AB2E2269329D700D69D4F /* Preview Assets.xcassets in Resources */,
